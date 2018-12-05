@@ -1,5 +1,5 @@
 import threading
-from queue import *
+from Queue import *
 import Utilities
 
 class DataStructuresManagement():

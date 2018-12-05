@@ -1,6 +1,7 @@
 from DataStructuresManagement import DataStructuresManagement
-from queue import *
+from Queue import *
 import Utilities
+from socket import error as SocketError
 
 
 def store_value_from_client(id_str, data):
@@ -17,15 +18,18 @@ def store_value_from_client(id_str, data):
 
     window.put_nowait(data)
 
-    print("Client: ", id_str, " - window: ", list(window.queue))
+    print "Client: ", id_str, " - window: ", list(window.queue)
 
     if window.full():
         l_window = list(window.queue)
 
-        AVG = Utilities.mean(l_window)[
-            1]  # per il momento skippo il check se è un numero o no, prendo direttament eil valore
+        # calcolo la media sulla finestra
+        # per il momento skippo il check se e un numero o no
+        # prendo direttamente il valore
 
-        print("Client: ", id_str, " - AVG ", AVG)
+        AVG = Utilities.mean(l_window)[1]
+
+        print "Client: ", id_str, " - AVG ", AVG
         dict_values[id_str].queue.clear()
 
         DataStructuresManagement.set_dict_values(dict_values)
@@ -71,3 +75,37 @@ def cmp_avg_and_decide(id_str, AVG):
         do_movement = "backward"  # move backward
 
     return do_movement
+
+
+def wait_for_udp_port_num(conn):
+#WARNING: blocking call
+    try:
+
+        data = conn.recv(1024)
+
+    except SocketError as e:
+        print "E:SocketError in clientthread: ", e
+        return -1
+
+    '''
+    #PYTHON3
+    try:
+        data = conn.recv(1024)
+
+    except Exception as e:
+        print ("ERROR: ",e)
+        break
+    '''
+    if not data:
+        print "E:no data in the packet"
+        return -1
+
+    data_str = data.decode("utf-8")
+
+    res = Utilities.str_to_i(data_str)
+
+    if res[0] == False:
+        print "E:Not a number"
+        return -1
+
+    return res[1]
