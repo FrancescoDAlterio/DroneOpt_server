@@ -7,6 +7,7 @@ import Utilities
 import Server_functions
 import DroneControl
 from socket import error as SocketError
+import time
 import errno
 
 HOST='0.0.0.0'
@@ -60,9 +61,15 @@ def movementthread(id_str,avg):
     DroneControl.execute_movement(movement,1,1)
 
 
+def streamthread(ip_addr,udp_port):
+    print "Start sending UDP packets"
+    data=0
+    while True:
 
-
-
+        sock_stream.sendto(str(data).encode(), (ip_addr,udp_port))
+        #print "TR: sent UDP packet"
+        #time.sleep(0.5)
+        data=data+1
 
 def clientthread(conn,addr):
     # Sending message to connected client
@@ -82,6 +89,9 @@ def clientthread(conn,addr):
         addr[1]),"udp port:",cl_udp_port, "\tactive clients:", DataStructuresManagement.get_active_clients()
 
     conn.sendall('Welcome to the server\n'.encode())  # send only takes string
+
+    proc_thread = threading.Thread(target=streamthread, args=(addr[0], cl_udp_port,))
+    proc_thread.start()
 
 
     while True:
@@ -118,7 +128,7 @@ def clientthread(conn,addr):
         print "Client %s:%s sent: %s"%(addr[0],addr[1],res[1])
 
         #Processing data
-        id_str = addr[0]+":"+str(addr[1])
+        id_str = addr[0]+":"+str(addr[1])+"-"+str(cl_udp_port)
 
         avg=Server_functions.store_value_from_client(id_str,res[1])
 
