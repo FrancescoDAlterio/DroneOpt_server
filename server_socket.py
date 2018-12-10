@@ -1,6 +1,8 @@
 import socket
 import sys
+import os
 import threading
+import subprocess
 import signal
 from DataStructuresManagement import DataStructuresManagement
 import Utilities
@@ -10,26 +12,22 @@ from socket import error as SocketError
 import time
 import errno
 
+
+#global constants
+
 HOST='0.0.0.0'
 PORT_CONTROL=8888
-PORT_STREAM=9999
-###########################version without iperf################################
-#CREATE STREAM SOCKET
 
-sock_stream = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-print ('Stream Socket created')
+CLIENT_IPERF_PORT=5201
 
-#Bind stream socket to an address and a port
-try:
-    sock_stream.bind((HOST, PORT_STREAM))
-except socket.error as sock_err_msg:
-    print 'Stream socket bind failed! Error code: ', sock_err_msg.args[0], "Message",sock_err_msg.args[1]
-    print "Exiting..."
-    sys.exit()
 
-print 'Stream Socket bind complete'
+#global variables
 
-#CREATE CONTROL SOCKET
+client_running = True
+
+##### END DECLARATION PART #####
+
+#CREATE CONTROL SOCKET TCP
 
 sock_control = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print ('Control Socket created')
@@ -61,40 +59,51 @@ def movementthread(id_str,avg):
     DroneControl.execute_movement(movement,1,1)
 
 
-def streamthread(ip_addr,udp_port):
-    print "Start sending UDP packets"
-    data=0
-    while True:
 
-        sock_stream.sendto(str(data).encode(), (ip_addr,udp_port))
-        #print "TR: sent UDP packet"
-        #time.sleep(0.5)
-        data=data+1
+def streamthread(ip_addr):
+    print "Start Iperf3 client"
+
+    global  client_running
+
+
+    #pipe_name = 'pipe_test'
+
+    #pipeout = os.open(pipe_name, os.O_WRONLY)
+    file_temp = open("./file_temp.txt","w")
+    process_to_open = 'stdbuf -oL iperf3 -c '+ip_addr+' -u -i 1 -p 5201 -b 0 -t 0'
+    p = subprocess.call(process_to_open, shell=True,stdout=file_temp,stderr=file_temp)
+
+    print "THREAD streamthread e' nel loop while true"
+    while True:
+        time.sleep(1)
+    #client_running = False
+
 
 def clientthread(conn,addr):
-    # Sending message to connected client
 
-    # infinite loop so that function do not terminate and thread do not end.
-
-    cl_udp_port = Server_functions.wait_for_udp_port_num(conn)
-
-    if cl_udp_port == -1:
-        print "closing connection"
-        conn.close()
-        return
-
-    new_client = (addr[0], addr[1], cl_udp_port)
+    #register client into the data structure
+    new_client = (addr[0], addr[1])
     DataStructuresManagement.add_active_clients(new_client)
     print 'Connected with ', addr[0], ':', str(
-        addr[1]),"udp port:",cl_udp_port, "\tactive clients:", DataStructuresManagement.get_active_clients()
+        addr[1]), "\tactive clients:", DataStructuresManagement.get_active_clients()
+
+    #wait for "ready" client message
+    try:
+
+        ready = conn.recv(1024)
+
+    except SocketError as e:
+        print "E:SocketError in clientthread: ", e
+        Server_functions.close_client_thread(conn,addr)
+
+
+    iperf_thread = threading.Thread(target=streamthread, args=(addr[0],))
+    iperf_thread.start()
 
     conn.sendall('Welcome to the server\n'.encode())  # send only takes string
 
-    proc_thread = threading.Thread(target=streamthread, args=(addr[0], cl_udp_port,))
-    proc_thread.start()
 
-
-    while True:
+    while client_running:
 
         # Receiving from client
         try:
@@ -128,7 +137,7 @@ def clientthread(conn,addr):
         print "Client %s:%s sent: %s"%(addr[0],addr[1],res[1])
 
         #Processing data
-        id_str = addr[0]+":"+str(addr[1])+"-"+str(cl_udp_port)
+        id_str = addr[0]+":"+str(addr[1])
 
         avg=Server_functions.store_value_from_client(id_str,res[1])
 
@@ -144,7 +153,7 @@ def clientthread(conn,addr):
         #Sending answer
         conn.sendall(reply)
 
-    DataStructuresManagement.rmv_active_clients((addr[0], addr[1],cl_udp_port))
+    DataStructuresManagement.rmv_active_clients((addr[0], addr[1]))
 
 
     # came out of loop

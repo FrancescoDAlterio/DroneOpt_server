@@ -2,7 +2,7 @@ from DataStructuresManagement import DataStructuresManagement
 from Queue import *
 import Utilities
 from socket import error as SocketError
-
+import sys
 
 def store_value_from_client(id_str, data):
     dict_values = DataStructuresManagement.get_dict_values()
@@ -75,6 +75,17 @@ def cmp_avg_and_decide(id_str, AVG):
         do_movement = "backward"  # move backward
 
     return do_movement
+
+
+def close_client_thread(conn,addr):
+    DataStructuresManagement.rmv_active_clients((addr[0], addr[1]))
+
+    # came out of loop
+    print "CONNECTION CLOSED, address: ", addr, "\tactive clients:", DataStructuresManagement.get_active_clients()
+
+    conn.close()
+    sys.exit()
+
 
 
 def wait_for_udp_port_num(conn):
