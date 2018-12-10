@@ -13,7 +13,7 @@ import errno
 HOST='0.0.0.0'
 PORT_CONTROL=8888
 PORT_STREAM=9999
-
+###########################version without iperf################################
 #CREATE STREAM SOCKET
 
 sock_stream = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
