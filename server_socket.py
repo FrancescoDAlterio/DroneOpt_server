@@ -48,6 +48,8 @@ sock_control.listen(10)
 print 'Control Socket now listening'
 
 
+#THREADS DECLARATION
+
 
 
 def movementthread(id_str,avg):
@@ -142,9 +144,12 @@ def clientthread(conn,addr):
         avg=Server_functions.store_value_from_client(id_str,res[1])
 
         if not avg == -1:
+            print" variabile drone is moving 1: ",DroneControl.drone_is_moving;
             print "START MOVEMENT_THREAD"
             movement_thread = threading.Thread(target=movementthread, args=(id_str, avg,))
             movement_thread.start()
+            time.sleep(2)
+            print" variabile drone is moving 2: ", DroneControl.drone_is_moving
 
 
         reply = b'OK...' + data
@@ -162,6 +167,8 @@ def clientthread(conn,addr):
 
     conn.close()
 
+
+#MAIN PROCESS
 
 # now keep talking with the client
 while 1:
